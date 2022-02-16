@@ -6,6 +6,7 @@
 -module(grpcbox).
 
 -export([start_server/1,
+         start_client/3,
          server_child_spec/5]).
 
 -include_lib("chatterbox/include/http2.hrl").
@@ -46,6 +47,3 @@ server_child_spec(ServerOpts, GrpcOpts, ListenOpts, PoolOpts, TransportOpts) ->
     supervisor:startchild_ret().
 start_client(Name, Endpoints, Options) ->
     grpcbox_channel_sup:start_child(Name, Endpoints, Options).
-
-add_worker(Name, Endpoints, Options) ->
-    ok.

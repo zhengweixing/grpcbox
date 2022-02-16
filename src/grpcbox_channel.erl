@@ -4,6 +4,7 @@
 
 -export([start_link/3,
          is_ready/1,
+         add_worker/2,
          pick/2,
          stop/1]).
 -export([init/1,
@@ -114,12 +115,10 @@ init([Name, Endpoints, Options]) ->
 callback_mode() ->
     state_functions.
 
-
 connected({call, From}, is_ready, _Data) ->
     {keep_state_and_data, [{reply, From, true}]};
 connected(EventType, EventContent, Data) ->
     handle_event(EventType, EventContent, Data).
-
 
 idle(internal, connect, Data=#data{pool=Pool,
                                    stats_handler=StatsHandler,
@@ -182,9 +181,4 @@ start_workers(Pool, StatsHandler, Encoding, Endpoints) ->
              Encoding, StatsHandler),
          Pid
      end || Endpoint={Transport, Host, Port, SSLOptions} <- Endpoints].
-
-add_workers(Pool, Endpoint) ->
-    gproc_pool:add_worker(Pool, Endpoint),
-    grpcbox_subchannel:start_link(Endpoint, Pool, {Transport, Host, Port, SSLOptions},
-        Encoding, StatsHandler).
 
