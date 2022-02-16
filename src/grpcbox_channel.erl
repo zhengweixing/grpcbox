@@ -6,6 +6,7 @@
          is_ready/1,
          add_worker/2,
          pick/2,
+         pick/3,
          stop/1]).
 -export([init/1,
          callback_mode/0,
@@ -65,6 +66,20 @@ is_ready(Name) ->
 pick(Name, CallType) ->
     try
         case gproc_pool:pick_worker(Name) of
+            false -> {error, no_endpoints};
+            Pid when is_pid(Pid) ->
+                {ok, {Pid, interceptor(Name, CallType)}}
+        end
+    catch
+        error:badarg ->
+            {error, undefined_channel}
+    end.
+
+-spec pick(name(), unary | stream, any()) -> {ok, {pid(), grpcbox_client:interceptor() | undefined}} |
+                                     {error, undefined_channel | no_endpoints}.
+pick(Name, CallType, N) ->
+    try
+        case gproc_pool:pick_worker(Name, N) of
             false -> {error, no_endpoints};
             Pid when is_pid(Pid) ->
                 {ok, {Pid, interceptor(Name, CallType)}}
