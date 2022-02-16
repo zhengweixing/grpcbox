@@ -40,3 +40,12 @@ server_child_spec(ServerOpts, GrpcOpts, ListenOpts, PoolOpts, TransportOpts) ->
       type => supervisor,
       restart => permanent,
       shutdown => 1000}.
+
+
+-spec start_client(atom(), [grpcbox_channel:endpoint()], grpcbox_channel:options()) ->
+    supervisor:startchild_ret().
+start_client(Name, Endpoints, Options) ->
+    grpcbox_channel_sup:start_child(Name, Endpoints, Options).
+
+add_worker(Name, Endpoints, Options) ->
+    ok.

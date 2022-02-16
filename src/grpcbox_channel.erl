@@ -49,6 +49,11 @@
 start_link(Name, Endpoints, Options) ->
     gen_statem:start_link(?CHANNEL(Name), ?MODULE, [Name, Endpoints, Options], []).
 
+-spec add_worker(name(), [endpoint()]) -> {ok, pid()} | ignore | {error, term()}.
+add_worker(Name, Endpoints) ->
+    gen_statem:call(?CHANNEL(Name), {add_worker, Endpoints}).
+
+
 -spec is_ready(name()) -> boolean().
 is_ready(Name) ->
     gen_statem:call(?CHANNEL(Name), is_ready).
@@ -109,10 +114,12 @@ init([Name, Endpoints, Options]) ->
 callback_mode() ->
     state_functions.
 
+
 connected({call, From}, is_ready, _Data) ->
     {keep_state_and_data, [{reply, From, true}]};
 connected(EventType, EventContent, Data) ->
     handle_event(EventType, EventContent, Data).
+
 
 idle(internal, connect, Data=#data{pool=Pool,
                                    stats_handler=StatsHandler,
@@ -125,6 +132,12 @@ idle({call, From}, is_ready, _Data) ->
 idle(EventType, EventContent, Data) ->
     handle_event(EventType, EventContent, Data).
 
+handle_event({call, From}, {add_worker, Endpoints}, Data=#data{ pool=Pool,
+                                                                stats_handler=StatsHandler,
+                                                                encoding=Encoding,
+                                                                endpoints=OldEndpoints}) ->
+    _ = start_workers(Pool, StatsHandler, Encoding, Endpoints),
+    {keep_state, Data#data{ endpoints = Endpoints ++ OldEndpoints }, [{reply, From, ok}]};
 handle_event(_, _, Data) ->
     {keep_state, Data}.
 
@@ -169,4 +182,9 @@ start_workers(Pool, StatsHandler, Encoding, Endpoints) ->
              Encoding, StatsHandler),
          Pid
      end || Endpoint={Transport, Host, Port, SSLOptions} <- Endpoints].
+
+add_workers(Pool, Endpoint) ->
+    gproc_pool:add_worker(Pool, Endpoint),
+    grpcbox_subchannel:start_link(Endpoint, Pool, {Transport, Host, Port, SSLOptions},
+        Encoding, StatsHandler).
 
